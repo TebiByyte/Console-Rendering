@@ -10,17 +10,17 @@ struct Vector3 {
 	float GetLengthSquared();
 	Vector3 Normalize();
 	Vector4 ToVector4();
-	static float Dot(Vector3&, Vector3&);
-	static Vector3 Cross(Vector3&, Vector3&);
+	static float Dot(const Vector3&, const Vector3&);
+	static Vector3 Cross(const Vector3&, const Vector3&);
 };
 
-Vector3 operator+(Vector3&, Vector3&);
-Vector3 operator-(Vector3&, Vector3&);
-Vector3 operator/(Vector3&, float);
-Vector3 operator*(Vector3&, float);
-Vector3 operator*(float, Vector3&);
-Vector3 operator-(Vector3&);
-bool operator==(Vector3&, Vector3&);
+Vector3 operator+(const Vector3&, const Vector3&);
+Vector3 operator-(const Vector3&, const Vector3&);
+Vector3 operator/(const Vector3&, float);
+Vector3 operator*(const Vector3&, float);
+Vector3 operator*(float, const Vector3&);
+Vector3 operator-(const Vector3&);
+bool operator==(const Vector3&, const Vector3&);
 
 struct Vector4 {
 	float x, y, z, w;
@@ -28,27 +28,27 @@ struct Vector4 {
 	Vector3 ToVector3();
 };
 
-/*Vector4 operator+(Vector4&, Vector4&);
-Vector4 operator-(Vector4&, Vector4&);
-Vector4 operator/(Vector4&, float);
-Vector4 operator*(Vector4&, float);
-Vector4 operator*(float, Vector4&);
-bool operator==(Vector4&, Vector4&);
+Vector4 operator+(const Vector4&, const Vector4&);
+Vector4 operator-(const Vector4&, const Vector4&);
+Vector4 operator/(const Vector4&, float);
+Vector4 operator*(const Vector4&, float);
+Vector4 operator*(float, const Vector4&);
+Vector4 operator-(const Vector4&);
+bool operator==(const Vector4&, const Vector4&);
 
 struct Matrix {
 	float Components[4][4];
 
-	Matrix(float[4][4]);
-	static Matrix Inverse(Matrix&);
+	static Matrix Inverse(Matrix);
 	static Matrix CreatePerspectiveMatrix(float, float, float);
 };
 
 void RowOperation(Matrix&, int, int, float);
 void ScaleRow(Matrix&, int, float);
 
-Matrix operator-(Matrix&);
-Matrix operator*(Matrix&, float);
-Matrix operator*(float, Matrix&);
-Matrix operator*(Matrix&, Vector4&);
-Matrix operator*(Matrix&, Matrix&);
-Matrix operator/(Matrix&, float);*/
+Matrix operator-(const Matrix&);
+Matrix operator*(const Matrix&, float);
+Matrix operator*(float, const Matrix&);
+Vector4 operator*(const Matrix&, const Vector4&);
+Matrix operator*(const Matrix&, const Matrix&);
+Matrix operator/(const Matrix&, float);

@@ -152,9 +152,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Color.h" />
+    <ClInclude Include="MainWindow.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="BaseWindow.h" />
     <ClInclude Include="VectorMath.h" />
+    <ClInclude Include="VertexAttribute.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Color.cpp" />

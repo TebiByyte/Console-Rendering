@@ -1,5 +1,6 @@
 #pragma once
 #include "Color.h"
+#include "VertexAttribute.h"
 #include <Windows.h>
 
 //TODO: Add some virtual methods for things to do on updating
@@ -24,6 +25,8 @@ public:
 	void BeginThread();
 	void SetPixel(int, int, Color);
 	void Render();
+	void DrawTriangle(VertexAttribute&, VertexAttribute&, VertexAttribute&);
+	void ClearScreen(Color);
 
 	BaseWindow(int, int);
 
@@ -35,6 +38,8 @@ protected:
 
 		return TRUE;
 	}
+
+	virtual void OnUpdate() {}
 
 	int getIndex(int, int);
 };

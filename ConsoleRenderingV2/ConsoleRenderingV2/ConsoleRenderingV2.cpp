@@ -14,8 +14,8 @@
 
 int main()
 {
-	MainWindow win = MainWindow(400, 400);
-	win.ConstructWindow(2, 2);
+	MainWindow win = MainWindow(300, 300);
+	win.ConstructWindow(3, 3);
 	win.BeginThread();
 
 	/*BaseWindow MainWin = BaseWindow(256, 256);

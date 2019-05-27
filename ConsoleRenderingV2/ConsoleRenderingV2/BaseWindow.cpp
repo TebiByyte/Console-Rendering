@@ -88,7 +88,7 @@ VertexAttribute BaseWindow::intersectLinePlane(Vector3& n, Vector3& p, VertexAtt
 	return VertexAttribute{
 		(b.Position - a.Position) * t + a.Position,
 		Vector3{0, 0, 0}, //Just allow the normal to be zero for now.
-		Color{256, 256, 256}
+		a.VertexColor * t + (1 - t) * b.VertexColor
 	};
 }
 
@@ -108,13 +108,20 @@ int BaseWindow::clipTrianglePlane(Vector3 planePosition, Vector3 planeNormal, Tr
 	float d1 = distFromPlane(inputTri.b.Position);
 	float d2 = distFromPlane(inputTri.c.Position);
 
-	if (d0 >= 0) { inside[insideCount++] = &inputTri.a; }
+	if (d0 >= 0) { 
+		inside[insideCount++] = &inputTri.a; 
+	}
 	else { outside[outsideCount++] = &inputTri.a; }
 
-	if (d1 >= 0) { inside[insideCount++] = &inputTri.b; }
+	if (d1 >= 0) { 
+		inside[insideCount++] = &inputTri.b; 
+	}
 	else { outside[outsideCount++] = &inputTri.b; }
 
-	if (d2 >= 0) { inside[insideCount++] = &inputTri.c; }
+	if (d2 >= 0) 
+	{ 
+		inside[insideCount++] = &inputTri.c; 
+	}
 	else { outside[outsideCount++] = &inputTri.c; }
 
 	if (insideCount == 0) {
@@ -199,7 +206,7 @@ void BaseWindow::DrawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 
 			float depth = Z1 * u + Z2 * s + Z3 * t;
 
-			Color color = { 256, 256, 256 };//(a.VertexColor * u * Z1 + b.VertexColor * s * Z2 + c.VertexColor * t * Z3) / depth;
+			Color color = (a.VertexColor * u * Z1 + b.VertexColor * s * Z2 + c.VertexColor * t * Z3) * (1 / depth);
 			//This will eventually invoke a shader program with the interpolated position, normal, and vertex color. 
 
 			SetPixel(x, y, color);
@@ -213,32 +220,31 @@ void BaseWindow::DrawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 		float curx1 = a.x;
 		float curx2 = a.x;
 
-		for (int y = (int)a.y; y <= b.y; y++) {
-			fillLine((int)curx1, (int)curx2, y);
+		for (int y = round(a.y); y <= b.y; y++) {
+			fillLine(curx1, curx2, y);
 			curx1 += invslope1;
 			curx2 += invslope2;
 		}
 	};
 
 	auto fillTopFlatTri = [fillLine](Vector3 a, Vector3 b, Vector3 c) {
-
 		float invslope1 = (c.x - a.x) / (c.y - a.y);
 		float invslope2 = (c.x - b.x) / (c.y - b.y);
 
 		float curx1 = c.x;
 		float curx2 = c.x;
 
-		for (int y = c.y; y > a.y; y--) {
-			fillLine((int)curx1, (int)curx2, y);
+		for (int y = round(c.y); y > a.y; y--) {
+			fillLine(curx1, curx2, y);
 			curx1 -= invslope1;
 			curx2 -= invslope2;
 		}
 	};
 
-	if (abs(screenCoordB.y - screenCoordC.y) < 5) {
+	if (abs(screenCoordB.y - screenCoordC.y) < 1) {
 		fillBottomFlatTri(screenCoordA, screenCoordB, screenCoordC);
 	}
-	else if (abs(screenCoordA.y - screenCoordC.y) < 5) {
+	else if (abs(screenCoordA.y - screenCoordC.y) < 1) {
 		fillTopFlatTri(screenCoordA, screenCoordB, screenCoordC);
 	}
 	else {
@@ -249,7 +255,7 @@ void BaseWindow::DrawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 	}
 }
 
-void BaseWindow::DrawClippedTri(Triangle& tri, int clipAgainst = 0) {
+void BaseWindow::DrawClippedTri(Triangle& tri, int clipAgainst) {
 	//0 clips against the near plane
 	//1 clips against the far plane
 	//2 clips against the top plane
@@ -270,45 +276,39 @@ void BaseWindow::DrawClippedTri(Triangle& tri, int clipAgainst = 0) {
 		}
 		case(1): {
 			planeNormal = { 0, 0, -1 };
-			planePosition = { 0, 0, 2 };
+			planePosition = { 0, 0, 50 };
 			break;
 		}
 		case(2): {
 			planeNormal = { 0, -1, 0 };
-			planePosition = { 0, 1, 0 };
+			planePosition = { 0, 0.5f, 0 };
 			break;
 		}
 		case(3): {
 			planeNormal = { 0, 1, 0 };
-			planePosition = { 0, -1, 0 };
+			planePosition = { 0, -0.5f, 0 };
 			break;
 		}
 		case(4): {
 			planeNormal = { -1, 0, 0 };
-			planePosition = { 1, 0, 0 };
+			planePosition = { 0.5f, 0, 0 };
 			break;
 		}
 		case(5): {
 			planeNormal = { 1, 0, 0 };
-			planePosition = { -1, 0, 0 };
+			planePosition = { -0.5f, 0, 0 };
 			break;
 		}
 	}
 
 	int numOut = clipTrianglePlane(planePosition, planeNormal, tri, out1, out2);
 
-	if (numOut == 0) { return; }
-	else if (numOut == 1) {
-		DrawTriangle(out1.a, out1.b, out1.c);
-	}
-	else if (numOut == 2) {
-		//DrawTriangle(out1.a, out1.b, out1.c);
-		//DrawTriangle(out2.a, out2.b, out2.c);
-	}
+	if (numOut == 0) { 
 
-	if (numOut == 0) { return; }
+		return; 
+	}
 	else if (numOut == 1) {
-		if (clipAgainst < 6) {
+		if (clipAgainst < 5) {
 			DrawClippedTri(out1, clipAgainst + 1);
 		}
 		else {
@@ -316,7 +316,7 @@ void BaseWindow::DrawClippedTri(Triangle& tri, int clipAgainst = 0) {
 		}
 	}
 	else if (numOut == 2) { 
-		if (clipAgainst < 6) {
+		if (clipAgainst < 5) {
 			DrawClippedTri(out1, clipAgainst + 1);
 			DrawClippedTri(out2, clipAgainst + 1);
 		}
@@ -366,14 +366,14 @@ void BaseWindow::Render() {
 
 			ScreenContents[getIndex(x, y)] = newPixel;
 			
-			/*if (x < Width - 1)
+			if (x < Width - 1)
 				SetPixel(x + 1, y,     (error * e1) + ScreenContents[getIndex(x + 1, y    )]);
 			if (x > 0 && y < Height - 1)
 				SetPixel(x - 1, y + 1, (error * e2) + ScreenContents[getIndex(x - 1, y + 1)]);
 			if (y < Height - 1)
-				SetPixel(x,     y + 1, (error * e3) + ScreenContents[getIndex(x,     y + 1)]);*/
-			//if (x < Width - 1 && y < Height - 1)
-				//SetPixel(x + 1, y + 1, (error * e4) + ScreenContents[getIndex(x + 1, y + 1)]);
+				SetPixel(x,     y + 1, (error * e3) + ScreenContents[getIndex(x,     y + 1)]);
+			if (x < Width - 1 && y < Height - 1)
+				SetPixel(x + 1, y + 1, (error * e4) + ScreenContents[getIndex(x + 1, y + 1)]);
 			//I have no clue why the dithering doesn't work properly with this last line. 
 
 			short r = newPixel.R < 128 ? 0 : 0b01000000;

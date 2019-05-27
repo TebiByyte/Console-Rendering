@@ -13,7 +13,7 @@ float Vector3::GetLengthSquared() { return x * x + y * y + z * z; }
 
 Vector4 Vector3::ToVector4() { return { x, y, z, 1 }; }
 
-float Vector3::Dot(const Vector3& a, const Vector3& b) { return a.x * b.x + a.y + b.y + a.z * b.z; }
+float Vector3::Dot(const Vector3& a, const Vector3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
 Vector3 Vector3::Cross(const Vector3& a, const Vector3& b) {
 	return {

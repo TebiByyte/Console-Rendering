@@ -9,29 +9,29 @@
 #include <list>
 #include <iterator>
 
-BOOL BaseWindow::isRunning = FALSE;
+BOOL BaseWindow::m_isRunning = FALSE;
 
 BaseWindow::BaseWindow(int Height = 128, int Width = 128) {
-	this->Height = Height;
-	this->Width =  Width;
+	this->m_height = Height;
+	this->m_width =  Width;
 
-	this->ScreenContents = new Color[Height * Width];
-	this->ScreenBuffer = new CHAR_INFO[Height * Width];
-	this->DepthBuffer =    new float[Height * Width];
-	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	RectWindow = { 0, 0, 1, 1 };
-	SetConsoleWindowInfo(hConsole, TRUE, &RectWindow);
-	triQueue = std::list<Triangle>{};
+	this->m_screenContents = new Color[Height * Width];
+	this->m_screenBuffer = new CHAR_INFO[Height * Width];
+	this->m_depthBuffer =    new float[Height * Width];
+	m_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	m_rectWindow = { 0, 0, 1, 1 };
+	SetConsoleWindowInfo(m_hConsole, TRUE, &m_rectWindow);
+	m_triQueue = std::list<Triangle>{};
 }
 
-int BaseWindow::ConstructWindow(int fontW, int fontH) {
-	isRunning = TRUE;
-	COORD coord = { (short)Width, (short)Height };
-	if (!SetConsoleScreenBufferSize(hConsole, coord)) {
+int BaseWindow::constructWindow(int fontW, int fontH) {
+	m_isRunning = TRUE;
+	COORD coord = { (short)m_width, (short)m_height };
+	if (!SetConsoleScreenBufferSize(m_hConsole, coord)) {
 		throw "Failed to set screen buffer size.";
 	}
 
-	if (!SetConsoleActiveScreenBuffer(hConsole)) {
+	if (!SetConsoleActiveScreenBuffer(m_hConsole)) {
 		throw "Failed to set screen buffer.";
 	}
 
@@ -44,38 +44,38 @@ int BaseWindow::ConstructWindow(int fontW, int fontH) {
 	cfi.FontWeight = FW_NORMAL;
 
 	wcscpy_s(cfi.FaceName, L"Consolas");
-	if (!SetCurrentConsoleFontEx(hConsole, false, &cfi)) {
+	if (!SetCurrentConsoleFontEx(m_hConsole, false, &cfi)) {
 		throw "Failed to set the font.";
 	}
 
-	RectWindow = { 0, 0, (short)Width - 1, (short)Height - 1 };
-	if (!SetConsoleWindowInfo(hConsole, TRUE, &RectWindow)) {
+	m_rectWindow = { 0, 0, (short)m_width - 1, (short)m_height - 1 };
+	if (!SetConsoleWindowInfo(m_hConsole, TRUE, &m_rectWindow)) {
 		throw "Failed to set console info";
 	}
 
-	SetConsoleCtrlHandler((PHANDLER_ROUTINE)EventHandler, TRUE);
+	SetConsoleCtrlHandler((PHANDLER_ROUTINE)eventHandler, TRUE);
 
 	return 1;
 }
 
-void BaseWindow::ClearScreen(Color clearColor) {
-	for (int x = 0; x < Width; x++) {
-		for (int y = 0; y < Height; y++) {
-			SetPixel(x, y, clearColor);
+void BaseWindow::clearScreen(Color clearColor) {
+	for (int x = 0; x < m_width; x++) {
+		for (int y = 0; y < m_height; y++) {
+			setPixel(x, y, clearColor);
 		}
 	}
 }
 
-void BaseWindow::BeginThread() {
-	while (BaseWindow::isRunning) {
+void BaseWindow::beginThread() {
+	while (BaseWindow::m_isRunning) {
 
 		OnUpdate();
-		Render();
+		render();
 	}
 }
 
 int BaseWindow::getIndex(int x, int y) {
-	return x + Width * y;
+	return x + m_width * y;
 }
 
 VertexAttribute BaseWindow::intersectLinePlane(Vector3& n, Vector3& p, VertexAttribute& a, VertexAttribute& b) {
@@ -88,7 +88,7 @@ VertexAttribute BaseWindow::intersectLinePlane(Vector3& n, Vector3& p, VertexAtt
 	return VertexAttribute{
 		(b.Position - a.Position) * t + a.Position,
 		Vector3{0, 0, 0}, //Just allow the normal to be zero for now.
-		a.VertexColor * t + (1 - t) * b.VertexColor
+		(b.VertexColor - a.VertexColor) * t + a.VertexColor
 	};
 }
 
@@ -153,10 +153,10 @@ int BaseWindow::clipTrianglePlane(Vector3 planePosition, Vector3 planeNormal, Tr
 	}
 }
 
-void BaseWindow::DrawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttribute& c) {
-	Vector3 screenCoordA = Vector3{ Width * a.Position.x + Width / 2, Height * a.Position.y + Height / 2, 0 };
-	Vector3 screenCoordB = Vector3{ Width * b.Position.x + Width / 2, Height * b.Position.y + Height / 2, 0 };
-	Vector3 screenCoordC = Vector3{ Width * c.Position.x + Width / 2, Height * c.Position.y + Height / 2, 0 };
+void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttribute& c) {
+	Vector3 screenCoordA = Vector3{ round(m_width * a.Position.x + m_width / 2), round(m_height * a.Position.y + m_height / 2), 0 };
+	Vector3 screenCoordB = Vector3{ round(m_width * b.Position.x + m_width / 2), round(m_height * b.Position.y + m_height / 2), 0 };
+	Vector3 screenCoordC = Vector3{ round(m_width * c.Position.x + m_width / 2), round(m_height * c.Position.y + m_height / 2), 0 };
 
 	Vector3 UnsortedA = screenCoordA;
 	Vector3 UnsortedB = screenCoordB;
@@ -200,16 +200,17 @@ void BaseWindow::DrawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 		for (int x = x1; x < x2; x++) {
 			Vector3 q = Vector3{ UnsortedA.x - x, UnsortedA.y - y, 0 };
 
-			float s = Vector3::Cross(q, ac).z / Vector3::Cross(ab, ac).GetLength();
-			float t = Vector3::Cross(ab, q).z / Vector3::Cross(ab, ac).GetLength();
+			float s = abs(Vector3::Cross(q, ac).z) / Vector3::Cross(ab, ac).GetLength();
+			float t = abs(Vector3::Cross(ab, q).z) / Vector3::Cross(ab, ac).GetLength();
 			float u = 1 - (s + t);
 
 			float depth = Z1 * u + Z2 * s + Z3 * t;
 
 			Color color = (a.VertexColor * u * Z1 + b.VertexColor * s * Z2 + c.VertexColor * t * Z3) * (1 / depth);
+
 			//This will eventually invoke a shader program with the interpolated position, normal, and vertex color. 
 
-			SetPixel(x, y, color);
+			setPixel(x, y, color);
 		}
 	};
 
@@ -255,7 +256,7 @@ void BaseWindow::DrawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 	}
 }
 
-void BaseWindow::DrawClippedTri(Triangle& tri, int clipAgainst) {
+void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 	//0 clips against the near plane
 	//1 clips against the far plane
 	//2 clips against the top plane
@@ -309,37 +310,33 @@ void BaseWindow::DrawClippedTri(Triangle& tri, int clipAgainst) {
 	}
 	else if (numOut == 1) {
 		if (clipAgainst < 5) {
-			DrawClippedTri(out1, clipAgainst + 1);
+			drawClippedTri(out1, clipAgainst + 1);
 		}
 		else {
-			DrawTriangle(out1.a, out1.b, out1.c);
+			drawTriangle(out1.a, out1.b, out1.c);
 		}
 	}
 	else if (numOut == 2) { 
 		if (clipAgainst < 5) {
-			DrawClippedTri(out1, clipAgainst + 1);
-			DrawClippedTri(out2, clipAgainst + 1);
+			drawClippedTri(out1, clipAgainst + 1);
+			drawClippedTri(out2, clipAgainst + 1);
 		}
 		else {
-			DrawTriangle(out1.a, out1.b, out1.c);
-			DrawTriangle(out2.a, out2.b, out2.c);
+			drawTriangle(out1.a, out1.b, out1.c);
+			drawTriangle(out2.a, out2.b, out2.c);
 		}
 	}
 }
 
-void BaseWindow::PushTriangle(Triangle toPush) {
-	triQueue.push_back(toPush);
+void BaseWindow::pushTriangle(Triangle toPush) {
+	m_triQueue.push_back(toPush);
 }
 
-void BaseWindow::DrawTriangles() {
-	/*std::list<Triangle>::iterator it;
+void BaseWindow::drawTriangles() {
 
-	for (it = triQueue.begin(); it != triQueue.end; it++) {
-
-	}*/
 }
 
-void BaseWindow::Render() {
+void BaseWindow::render() {
 	//First, dither the color buffer
 
 	float e1 = (7.0f / 16.0f);
@@ -347,13 +344,13 @@ void BaseWindow::Render() {
 	float e3 = (5.0f / 16.0f);
 	float e4 = (1.0f / 16.0f);
 
-	for (int y = 0; y < Height; y++) {
-		for (int x = 0; x < Width; x++) {
-			Color currentPixel = ScreenContents[getIndex(x, y)];
+	for (int y = 0; y < m_height; y++) {
+		for (int x = 0; x < m_width; x++) {
+			Color currentPixel = m_screenContents[getIndex(x, y)];
 
-			short R = currentPixel.R < 64 ? 0 : 128;
-			short G = currentPixel.G < 64 ? 0 : 128;
-			short B = currentPixel.B < 64 ? 0 : 128;
+			short R = currentPixel.R < 85 ? 0 : 170;
+			short G = currentPixel.G < 85 ? 0 : 170;
+			short B = currentPixel.B < 85 ? 0 : 170;
 			float L = currentPixel.Luminance();
 
 			Color newPixel = Color{ R, G, B };
@@ -362,18 +359,16 @@ void BaseWindow::Render() {
 
 			Color error = currentPixel - newPixel;
 
-			//std::cout << error.R << std::endl;
-
-			ScreenContents[getIndex(x, y)] = newPixel;
+			m_screenContents[getIndex(x, y)] = newPixel;
 			
-			if (x < Width - 1)
-				SetPixel(x + 1, y,     (error * e1) + ScreenContents[getIndex(x + 1, y    )]);
-			if (x > 0 && y < Height - 1)
-				SetPixel(x - 1, y + 1, (error * e2) + ScreenContents[getIndex(x - 1, y + 1)]);
-			if (y < Height - 1)
-				SetPixel(x,     y + 1, (error * e3) + ScreenContents[getIndex(x,     y + 1)]);
+			/*if (x < m_width - 1)
+				setPixel(x + 1, y,     (error * e1) + m_screenContents[getIndex(x + 1, y    )]);
+			if (x > 0 && y < m_height - 1)
+				setPixel(x - 1, y + 1, (error * e2) + m_screenContents[getIndex(x - 1, y + 1)]);
+			if (y < m_height - 1)
+				setPixel(x,     y + 1, (error * e3) + m_screenContents[getIndex(x,     y + 1)]);
 			if (x < Width - 1 && y < Height - 1)
-				SetPixel(x + 1, y + 1, (error * e4) + ScreenContents[getIndex(x + 1, y + 1)]);
+				SetPixel(x + 1, y + 1, (error * e4) + ScreenContents[getIndex(x + 1, y + 1)]);*/
 			//I have no clue why the dithering doesn't work properly with this last line. 
 
 			short r = newPixel.R < 128 ? 0 : 0b01000000;
@@ -381,12 +376,12 @@ void BaseWindow::Render() {
 			short b = newPixel.B < 128 ? 0 : 0b00010000;
 			short l = L < 128 ? 0 : 0b10000000;
 			
-			ScreenBuffer[getIndex(x, y)].Attributes = l | r | g | b;
-			ScreenBuffer[getIndex(x, y)].Char.AsciiChar = ' ';
+			m_screenBuffer[getIndex(x, y)].Attributes = l | r | g | b;
+			m_screenBuffer[getIndex(x, y)].Char.AsciiChar = ' ';
 		}
 	}
 
-	WriteConsoleOutput(hConsole, ScreenBuffer, { (short)Width, (short)Height }, { 0, 0 }, &RectWindow);
+	WriteConsoleOutput(m_hConsole, m_screenBuffer, { (short)m_width, (short)m_height }, { 0, 0 }, &m_rectWindow);
 }
 
 float BaseWindow::getDepth(int x, int y) {
@@ -397,7 +392,7 @@ void BaseWindow::setDepth(int x, int y, float d) {
 
 }
 
-void BaseWindow::SetPixel(int x, int y, Color c) {
-	if (x >= 0 && x < Width && y >= 0 && y < Height)
-		ScreenContents[x + Width * y] = c;
+void BaseWindow::setPixel(int x, int y, Color c) {
+	if (x >= 0 && x < m_width && y >= 0 && y < m_height)
+		m_screenContents[x + m_width * y] = c;
 }

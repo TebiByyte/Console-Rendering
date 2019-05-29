@@ -19,7 +19,7 @@ Color operator*(const Color& a, const Color& b) {
 	return result;
 }
 
-Color operator*(const Color& a, float b) { 
+Color operator*(const Color& a, float b) {
 	float R = a.R * b;
 	float G = a.G * b;
 	float B = a.B * b;
@@ -34,7 +34,7 @@ Color operator*(float a, const Color& b) {
 }
 
 Color operator+(const Color& a, const Color& b) {
-	Color result = { a.R + b.R, a.G + b.G, a.B + b.B };	
+	Color result = { a.R + b.R, a.G + b.G, a.B + b.B };
 	return result;
 }
 
@@ -42,4 +42,3 @@ Color operator-(const Color& a, const Color& b) {
 	Color result = Color{ a.R - b.R, a.G - b.G, a.B - b.B };
 	return result;
 }
-

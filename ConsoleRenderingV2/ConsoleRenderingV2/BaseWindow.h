@@ -9,39 +9,40 @@
 
 class BaseWindow {
 private:
-	SMALL_RECT RectWindow;
-	CHAR_INFO* ScreenBuffer;
-	HANDLE hConsole;
-	int Height;
-	int Width;
-	Color* ScreenContents;
-	float* DepthBuffer;
+	SMALL_RECT m_rectWindow;
+	CHAR_INFO* m_screenBuffer;
+	HANDLE m_hConsole;
+	int m_height;
+	int m_width;
+	Color* m_screenContents;
+	float* m_depthBuffer;
+	static BOOL m_isRunning;
+	std::list<Triangle> m_triQueue;
+
 	void setDepth(int, int, float);
 	float getDepth(int, int);
-	static BOOL isRunning;
-	std::list<Triangle> triQueue;
 	VertexAttribute intersectLinePlane(Vector3&, Vector3&, VertexAttribute&, VertexAttribute&);
 	int clipTrianglePlane(Vector3, Vector3, Triangle&, Triangle&, Triangle&);
 
 public:
-	int GetHeight() { return Height; }
-	int GetWidth() { return Width; }
-	int ConstructWindow(int, int);
-	void BeginThread();
-	void SetPixel(int, int, Color);
-	void Render();
-	void DrawTriangle(VertexAttribute&, VertexAttribute&, VertexAttribute&);
-	void ClearScreen(Color);
-	void DrawTriangles();
-	void PushTriangle(Triangle);
-	void DrawClippedTri(Triangle&, int);
+	int getHeight() { return m_height; }
+	int getWidth() { return m_width; }
+	int constructWindow(int, int);
+	void beginThread();
+	void setPixel(int, int, Color);
+	void render();
+	void drawTriangle(VertexAttribute&, VertexAttribute&, VertexAttribute&);
+	void clearScreen(Color);
+	void drawTriangles();
+	void pushTriangle(Triangle);
+	void drawClippedTri(Triangle&, int);
 
 	BaseWindow(int, int);
 
 protected:
-	static BOOL EventHandler(DWORD evt) {
+	static BOOL eventHandler(DWORD evt) {
 		if (evt == CTRL_CLOSE_EVENT) {
-			BaseWindow::isRunning = FALSE;
+			BaseWindow::m_isRunning = FALSE;
 		}
 
 		return TRUE;

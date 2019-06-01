@@ -12,17 +12,23 @@ private:
 	SMALL_RECT m_rectWindow;
 	CHAR_INFO* m_screenBuffer;
 	HANDLE m_hConsole;
-	int m_height;
-	int m_width;
 	Color* m_screenContents;
 	float* m_depthBuffer;
+
+	VertexAttribute intersectLinePlane(Vector3&, Vector3&, VertexAttribute&, VertexAttribute&);
+	int clipTrianglePlane(Vector3, Vector3, Triangle&, Triangle&, Triangle&);
+
+protected:
 	static BOOL m_isRunning;
-	std::list<Triangle> m_triQueue;
+	Matrix m_perspective;
+	Matrix m_view;
+	Triangle* m_triBuffer;
+	int m_bufferLength;
+	int m_height;
+	int m_width;
 
 	void setDepth(int, int, float);
 	float getDepth(int, int);
-	VertexAttribute intersectLinePlane(Vector3&, Vector3&, VertexAttribute&, VertexAttribute&);
-	int clipTrianglePlane(Vector3, Vector3, Triangle&, Triangle&, Triangle&);
 
 public:
 	int getHeight() { return m_height; }
@@ -34,8 +40,8 @@ public:
 	void drawTriangle(VertexAttribute&, VertexAttribute&, VertexAttribute&);
 	void clearScreen(Color);
 	void drawTriangles();
-	void pushTriangle(Triangle);
 	void drawClippedTri(Triangle&, int);
+	void setTriangleBuffer(Triangle[], int);
 
 	BaseWindow(int, int);
 

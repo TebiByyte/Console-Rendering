@@ -159,3 +159,12 @@ Matrix Matrix::CreatePerspectiveMatrix(float fov, float near, float far) {
 		0, 0, -1, 0
 	};
 }
+
+Matrix Matrix::CreateTranslationMatrix(Vector3 t_position) {
+	return {
+		0, 0, 0, t_position.x,
+		0, 0, 0, t_position.y,
+		0, 0, 0, t_position.z,
+		0, 0, 0, 1
+	};
+}

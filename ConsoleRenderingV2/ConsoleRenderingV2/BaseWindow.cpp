@@ -9,6 +9,7 @@
 #include <list>
 #include <iterator>
 
+//TODO Fix triangle drawing so no gaps appear when trying to draw edge-connected triangles, refactor code. 
 BOOL BaseWindow::m_isRunning = FALSE;
 
 BaseWindow::BaseWindow(int Height = 128, int Width = 128) {
@@ -21,7 +22,6 @@ BaseWindow::BaseWindow(int Height = 128, int Width = 128) {
 	m_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	m_rectWindow = { 0, 0, 1, 1 };
 	SetConsoleWindowInfo(m_hConsole, TRUE, &m_rectWindow);
-	m_triQueue = std::list<Triangle>{};
 }
 
 int BaseWindow::constructWindow(int fontW, int fontH) {
@@ -62,6 +62,7 @@ void BaseWindow::clearScreen(Color clearColor) {
 	for (int x = 0; x < m_width; x++) {
 		for (int y = 0; y < m_height; y++) {
 			setPixel(x, y, clearColor);
+			setDepth(x, y, 1000);
 		}
 	}
 }
@@ -74,8 +75,13 @@ void BaseWindow::beginThread() {
 	}
 }
 
-int BaseWindow::getIndex(int x, int y) {
+inline int BaseWindow::getIndex(int x, int y) {
 	return x + m_width * y;
+}
+
+void BaseWindow::setTriangleBuffer(Triangle t_tris[], int t_bufferLength) {
+	m_triBuffer = t_tris;
+	m_bufferLength = t_bufferLength;
 }
 
 VertexAttribute BaseWindow::intersectLinePlane(Vector3& n, Vector3& p, VertexAttribute& a, VertexAttribute& b) {
@@ -154,9 +160,9 @@ int BaseWindow::clipTrianglePlane(Vector3 planePosition, Vector3 planeNormal, Tr
 }
 
 void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttribute& c) {
-	Vector3 screenCoordA = Vector3{ round(m_width * a.Position.x + m_width / 2), round(m_height * a.Position.y + m_height / 2), 0 };
-	Vector3 screenCoordB = Vector3{ round(m_width * b.Position.x + m_width / 2), round(m_height * b.Position.y + m_height / 2), 0 };
-	Vector3 screenCoordC = Vector3{ round(m_width * c.Position.x + m_width / 2), round(m_height * c.Position.y + m_height / 2), 0 };
+	Vector3 screenCoordA = Vector3{ floor(m_width * a.Position.x + m_width / 2), floor(m_height * a.Position.y + m_height / 2), 0 };
+	Vector3 screenCoordB = Vector3{ floor(m_width * b.Position.x + m_width / 2), floor(m_height * b.Position.y + m_height / 2), 0 };
+	Vector3 screenCoordC = Vector3{ floor(m_width * c.Position.x + m_width / 2), floor(m_height * c.Position.y + m_height / 2), 0 };
 
 	Vector3 UnsortedA = screenCoordA;
 	Vector3 UnsortedB = screenCoordB;
@@ -181,7 +187,6 @@ void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 	if (screenCoordA.y > screenCoordB.y)
 		SwapPositions(screenCoordA, screenCoordB);
 
-
 	auto fillLine = [this, a, b, c, UnsortedA, UnsortedB, UnsortedC](int x1, int x2, int y) {
 		Vector3 ab = UnsortedB - UnsortedA;
 		Vector3 ac = UnsortedC - UnsortedA;
@@ -205,12 +210,14 @@ void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 			float u = 1 - (s + t);
 
 			float depth = Z1 * u + Z2 * s + Z3 * t;
+			
+			if (abs(depth) < getDepth(x, y)) {
+				Color color = (a.VertexColor * u * Z1 + b.VertexColor * s * Z2 + c.VertexColor * t * Z3) * (1 / depth);
 
-			Color color = (a.VertexColor * u * Z1 + b.VertexColor * s * Z2 + c.VertexColor * t * Z3) * (1 / depth);
-
-			//This will eventually invoke a shader program with the interpolated position, normal, and vertex color. 
-
-			setPixel(x, y, color);
+				//This will eventually invoke a shader program with the interpolated position, normal, and vertex color. 
+				setDepth(x, y, depth);
+				setPixel(x, y, color);
+			}
 		}
 	};
 
@@ -328,12 +335,20 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 	}
 }
 
-void BaseWindow::pushTriangle(Triangle toPush) {
-	m_triQueue.push_back(toPush);
-}
-
 void BaseWindow::drawTriangles() {
+	for (int i = 0; i < m_bufferLength; i++) {
+		Vector4 aPosition = m_perspective * Matrix::Inverse(m_view) * m_triBuffer[i].a.Position.ToVector4();
+		Vector4 bPosition = m_perspective * Matrix::Inverse(m_view) * m_triBuffer[i].b.Position.ToVector4();
+		Vector4 cPosition = m_perspective * Matrix::Inverse(m_view) * m_triBuffer[i].c.Position.ToVector4();
 
+		Triangle view = {
+			{aPosition.ToVector3(), {0, 0, 0}, m_triBuffer[i].a.VertexColor},
+			{bPosition.ToVector3(), {0, 0, 0}, m_triBuffer[i].b.VertexColor},
+			{cPosition.ToVector3(), {0, 0, 0}, m_triBuffer[i].c.VertexColor}
+		};
+
+		drawClippedTri(view, 0);
+	}
 }
 
 void BaseWindow::render() {
@@ -361,14 +376,14 @@ void BaseWindow::render() {
 
 			m_screenContents[getIndex(x, y)] = newPixel;
 			
-			/*if (x < m_width - 1)
+			if (x < m_width - 1)
 				setPixel(x + 1, y,     (error * e1) + m_screenContents[getIndex(x + 1, y    )]);
 			if (x > 0 && y < m_height - 1)
 				setPixel(x - 1, y + 1, (error * e2) + m_screenContents[getIndex(x - 1, y + 1)]);
 			if (y < m_height - 1)
 				setPixel(x,     y + 1, (error * e3) + m_screenContents[getIndex(x,     y + 1)]);
-			if (x < Width - 1 && y < Height - 1)
-				SetPixel(x + 1, y + 1, (error * e4) + ScreenContents[getIndex(x + 1, y + 1)]);*/
+			//if (x < Width - 1 && y < Height - 1)*/
+				//SetPixel(x + 1, y + 1, (error * e4) + ScreenContents[getIndex(x + 1, y + 1)]);
 			//I have no clue why the dithering doesn't work properly with this last line. 
 
 			short r = newPixel.R < 128 ? 0 : 0b01000000;
@@ -385,14 +400,18 @@ void BaseWindow::render() {
 }
 
 float BaseWindow::getDepth(int x, int y) {
-	return 0;
+	if (x >= 0 && x < m_width && y >= 0 && y < m_height)
+		return m_depthBuffer[x + m_width * y];
+	else
+		return 0;
 }
 
 void BaseWindow::setDepth(int x, int y, float d) {
-
+	if (x >= 0 && x < m_width && y >= 0 && y < m_height)
+		m_depthBuffer[x + m_width * y] = d;
 }
 
-void BaseWindow::setPixel(int x, int y, Color c) {
+inline void BaseWindow::setPixel(int x, int y, Color c) {
 	if (x >= 0 && x < m_width && y >= 0 && y < m_height)
 		m_screenContents[x + m_width * y] = c;
 }

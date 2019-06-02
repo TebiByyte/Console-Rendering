@@ -5,11 +5,14 @@
 #include "VertexAttribute.h"
 #include <math.h>
 #include <chrono>
+#include <conio.h>
 
 #define PI 3.14159265358979323846
 
 class MainWindow : public BaseWindow {
 private:
+	Vector3 cameraLocation;
+
 	VertexAttribute a = VertexAttribute{
 		Vector3{-1, 0, 10},
 		Vector3{0, 0, 0},
@@ -63,8 +66,25 @@ public:
 		Triangle t1 = Triangle{ a1, b1, c1 };
 		Triangle buffer[2] = { t , t1};
 
+		char key = _getch();//I may need to do this in a separate thread...
+
+		if (key == 72) {
+			cameraLocation = cameraLocation + Vector3{ 0, 0, 0.1f };
+		}
+		else if (key == 75) {
+			cameraLocation = cameraLocation - Vector3{ 0.1f, 0, 0 };
+		}
+		else if (key == 77) {
+			cameraLocation = cameraLocation + Vector3{ 0.1f, 0, 0 };
+		}
+		else if (key == 80) {
+			cameraLocation = cameraLocation - Vector3{ 0, 0, 0.1f };
+		}
+
 		setTriangleBuffer(buffer, 2);
 		drawTriangles();
+
+		this->m_view = Matrix::CreateTranslationMatrix(cameraLocation);
 
 		//drawClippedTri(t, 0);
 		//drawClippedTri(t1, 0);
@@ -72,6 +92,7 @@ public:
 
 	MainWindow(int w, int h) : BaseWindow(w, h){
 		m_perspective = Matrix::CreatePerspectiveMatrix(75, 0.1f, 100);
+
 		m_view = {
 			1, 0, 0, 0,
 			0, 1, 0, 0,

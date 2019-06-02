@@ -29,6 +29,7 @@ protected:
 
 	void setDepth(int, int, float);
 	float getDepth(int, int);
+	//LRESULT CALLBACK WindowProc()
 
 public:
 	int getHeight() { return m_height; }

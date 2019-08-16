@@ -14,8 +14,8 @@
 
 int main()
 {
-	MainWindow win = MainWindow(300, 300);
-	win.constructWindow(3, 3);
+	MainWindow win = MainWindow(400, 400);
+	win.constructWindow(2, 2);
 	win.beginThread();
 
 	/*BaseWindow MainWin = BaseWindow(256, 256);

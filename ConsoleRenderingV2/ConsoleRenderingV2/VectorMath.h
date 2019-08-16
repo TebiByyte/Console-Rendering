@@ -42,6 +42,7 @@ struct Matrix {
 	static Matrix Inverse(Matrix);
 	static Matrix CreatePerspectiveMatrix(float, float, float);
 	static Matrix CreateTranslationMatrix(Vector3);
+	static Matrix CreateZRotationMatrix(float);
 };
 
 void RowOperation(Matrix&, int, int, float);

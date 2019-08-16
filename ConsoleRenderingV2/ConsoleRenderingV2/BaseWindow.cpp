@@ -211,11 +211,11 @@ void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 
 			float depth = Z1 * u + Z2 * s + Z3 * t;
 			
-			if (abs(depth) < getDepth(x, y)) {
+			if (1 / depth <= getDepth(x, y)) {
 				Color color = (a.VertexColor * u * Z1 + b.VertexColor * s * Z2 + c.VertexColor * t * Z3) * (1 / depth);
 
 				//This will eventually invoke a shader program with the interpolated position, normal, and vertex color. 
-				setDepth(x, y, depth);
+				setDepth(x, y, 1 / depth);
 				setPixel(x, y, color);
 			}
 		}
@@ -337,9 +337,9 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 
 void BaseWindow::drawTriangles() {
 	for (int i = 0; i < m_bufferLength; i++) {
-		Vector4 aPosition = m_perspective * Matrix::Inverse(m_view) * m_triBuffer[i].a.Position.ToVector4();
-		Vector4 bPosition = m_perspective * Matrix::Inverse(m_view) * m_triBuffer[i].b.Position.ToVector4();
-		Vector4 cPosition = m_perspective * Matrix::Inverse(m_view) * m_triBuffer[i].c.Position.ToVector4();
+		Vector4 aPosition = m_perspective * Matrix::Inverse(m_view) * m_model * m_triBuffer[i].a.Position.ToVector4();
+		Vector4 bPosition = m_perspective * Matrix::Inverse(m_view) * m_model * m_triBuffer[i].b.Position.ToVector4();
+		Vector4 cPosition = m_perspective * Matrix::Inverse(m_view) * m_model * m_triBuffer[i].c.Position.ToVector4();
 
 		Triangle view = {
 			{aPosition.ToVector3(), {0, 0, 0}, m_triBuffer[i].a.VertexColor},
@@ -376,7 +376,7 @@ void BaseWindow::render() {
 
 			m_screenContents[getIndex(x, y)] = newPixel;
 			
-			if (x < m_width - 1)
+			/*if (x < m_width - 1)
 				setPixel(x + 1, y,     (error * e1) + m_screenContents[getIndex(x + 1, y    )]);
 			if (x > 0 && y < m_height - 1)
 				setPixel(x - 1, y + 1, (error * e2) + m_screenContents[getIndex(x - 1, y + 1)]);
@@ -407,11 +407,13 @@ float BaseWindow::getDepth(int x, int y) {
 }
 
 void BaseWindow::setDepth(int x, int y, float d) {
-	if (x >= 0 && x < m_width && y >= 0 && y < m_height)
+	if (x >= 0 && x < m_width && y >= 0 && y < m_height) {
 		m_depthBuffer[x + m_width * y] = d;
+	}
 }
 
 inline void BaseWindow::setPixel(int x, int y, Color c) {
-	if (x >= 0 && x < m_width && y >= 0 && y < m_height)
+	if (x >= 0 && x < m_width && y >= 0 && y < m_height) {
 		m_screenContents[x + m_width * y] = c;
+	}
 }

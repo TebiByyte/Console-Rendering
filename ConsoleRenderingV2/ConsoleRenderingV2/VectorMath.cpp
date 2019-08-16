@@ -168,3 +168,15 @@ Matrix Matrix::CreateTranslationMatrix(Vector3 t_position) {
 		0, 0, 0, 1
 	};
 }
+
+Matrix Matrix::CreateZRotationMatrix(float angle) {
+	float cosA = (float)cos(angle);
+	float sinA = (float)sin(angle);
+
+	return {
+		cosA,  0, sinA, 0,
+		0,     1, 0,    0,
+		-sinA, 0, cosA, 0,
+		0,     0, 0,    1
+	};
+}

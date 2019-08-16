@@ -6,12 +6,15 @@
 #include <math.h>
 #include <chrono>
 #include <conio.h>
+#include "Mesh.h"
+
 
 #define PI 3.14159265358979323846
 
 class MainWindow : public BaseWindow {
 private:
-	Vector3 cameraLocation;
+	Vector3 cameraLocation = { 0, 0, -10 };
+	Mesh test = Mesh("C:/Users/Redemption/Desktop/Monkey.obj");
 
 	VertexAttribute a = VertexAttribute{
 		Vector3{-1, 0, 10},
@@ -54,19 +57,8 @@ private:
 public:
 	void OnUpdate() {
 		clearScreen(Color{ 0, 0, 0 });
-		angle += 0.1;
 
-		a.Position = Vector3{ 2 * (float)cos(angle),	0, 10 + 2 * (float)sin(angle)};
-
-		b.Position = Vector3{ 2 * (float)cos(angle + PI), 0, 10 + 2 * (float)sin(angle + PI)};
-
-		c.Position = Vector3{ 0, 1, 10};
-
-		Triangle t = Triangle{ a, b, c };
-		Triangle t1 = Triangle{ a1, b1, c1 };
-		Triangle buffer[2] = { t , t1};
-
-		char key = _getch();//I may need to do this in a separate thread...
+		/*char key = _getch();//I may need to do this in a separate thread...
 
 		if (key == 72) {
 			cameraLocation = cameraLocation + Vector3{ 0, 0, 0.1f };
@@ -79,21 +71,27 @@ public:
 		}
 		else if (key == 80) {
 			cameraLocation = cameraLocation - Vector3{ 0, 0, 0.1f };
-		}
+		}*/
+		angle += 0.1f;
 
-		setTriangleBuffer(buffer, 2);
+		setTriangleBuffer(test.m_data, test.triCount);
 		drawTriangles();
 
 		this->m_view = Matrix::CreateTranslationMatrix(cameraLocation);
-
-		//drawClippedTri(t, 0);
-		//drawClippedTri(t1, 0);
+		this->m_model = Matrix::CreateZRotationMatrix(angle);
 	}
 
 	MainWindow(int w, int h) : BaseWindow(w, h){
 		m_perspective = Matrix::CreatePerspectiveMatrix(75, 0.1f, 100);
 
 		m_view = {
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1
+		};
+
+		m_model = {
 			1, 0, 0, 0,
 			0, 1, 0, 0,
 			0, 0, 1, 0,

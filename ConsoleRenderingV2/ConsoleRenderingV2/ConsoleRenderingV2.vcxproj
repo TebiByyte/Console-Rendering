@@ -173,6 +173,12 @@
     <ClCompile Include="BaseWindow.cpp" />
     <ClCompile Include="VectorMath.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ConsoleRenderingV2.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\..\..\..\C++\ConsoleRenderingv2\ConsoleRenderingv2\Monkey.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

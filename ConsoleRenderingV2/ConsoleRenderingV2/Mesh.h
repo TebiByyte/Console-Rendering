@@ -9,6 +9,7 @@ class Mesh {
 public:
 	Triangle* m_data;
 	VertexAttribute* m_verts;
+	int triCount;
 
 	Mesh(std::string);
 private:

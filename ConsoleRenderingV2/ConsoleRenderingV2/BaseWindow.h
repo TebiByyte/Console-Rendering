@@ -22,6 +22,7 @@ protected:
 	static BOOL m_isRunning;
 	Matrix m_perspective;
 	Matrix m_view;
+	Matrix m_model;
 	Triangle* m_triBuffer;
 	int m_bufferLength;
 	int m_height;

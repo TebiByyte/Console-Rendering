@@ -271,6 +271,12 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 	//4 clips against the right plane
 	//5 clips against the left plane
 
+	Vector3 normal = Vector3::Cross((tri.b.Position - tri.a.Position), (tri.c.Position - tri.a.Position));
+
+	if (Vector3::Dot(-tri.a.Position, normal) <= 0) {
+		return;
+	}
+
 	Triangle out1;
 	Triangle out2;
 	Vector3 planeNormal = {};

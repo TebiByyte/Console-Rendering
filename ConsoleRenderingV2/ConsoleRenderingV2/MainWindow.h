@@ -13,50 +13,16 @@
 
 class MainWindow : public BaseWindow {
 private:
-	Vector3 cameraLocation = { 0, 0, -10 };
+	Vector3 cameraLocation = { 0, 0, 5 };
 	Mesh test = Mesh("C:/Users/Redemption/Desktop/Monkey.obj");
-
-	VertexAttribute a = VertexAttribute{
-		Vector3{-1, 0, 10},
-		Vector3{0, 0, 0},
-		Color{255, 0, 0}
-	};
-
-	VertexAttribute b = VertexAttribute{
-		Vector3{1, 0, 10},
-		Vector3{0, 0, 0},
-		Color{0, 255, 0}
-	};
-
-	VertexAttribute c = VertexAttribute{
-		Vector3{0, 1, 10},
-		Vector3{0, 0, 0},
-		Color{0, 0, 255}
-	};
-
-	VertexAttribute a1 = VertexAttribute{
-		Vector3{-0.3, -0.3, 4},
-		Vector3{0, 0, 0},
-		Color{0, 0, 255}
-	};
-
-	VertexAttribute b1 = VertexAttribute{
-		Vector3{0.3, -0.3, 10},
-		Vector3{0, 0, 0},
-		Color{0, 0, 255}
-	};
-
-	VertexAttribute c1 = VertexAttribute{
-		Vector3{0, 0.3, 12},
-		Vector3{0, 0, 0},
-		Color{0, 0, 255}
-	};
 
 	float angle = 0.4f;
 
 public:
 	void OnUpdate() {
 		clearScreen(Color{ 0, 0, 0 });
+		this->m_view = Matrix::CreateTranslationMatrix(cameraLocation);
+		this->m_model = Matrix::CreateZRotationMatrix(angle);
 
 		/*char key = _getch();//I may need to do this in a separate thread...
 
@@ -76,13 +42,10 @@ public:
 
 		setTriangleBuffer(test.m_data, test.triCount);
 		drawTriangles();
-
-		this->m_view = Matrix::CreateTranslationMatrix(cameraLocation);
-		this->m_model = Matrix::CreateZRotationMatrix(angle);
 	}
 
 	MainWindow(int w, int h) : BaseWindow(w, h){
-		m_perspective = Matrix::CreatePerspectiveMatrix(75, 0.1f, 100);
+		m_perspective = Matrix::CreatePerspectiveMatrix(75.0f, 0.1f, 100.0f);
 
 		m_view = {
 			1, 0, 0, 0,
@@ -90,6 +53,8 @@ public:
 			0, 0, 1, 0,
 			0, 0, 0, 1
 		};
+
+		//m_perspective = m_view;
 
 		m_model = {
 			1, 0, 0, 0,

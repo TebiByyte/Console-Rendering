@@ -90,9 +90,11 @@ VertexAttribute BaseWindow::intersectLinePlane(Vector3& n, Vector3& p, VertexAtt
 	float ad = Vector3::Dot(a.Position, n);
 	float bd = Vector3::Dot(b.Position, n);
 	float t = (dp - ad) / (bd - ad);
-	
+	Vector3 pos = (b.Position - a.Position) * t + a.Position;
+	pos.w = (b.Position.w - a.Position.w) * t + a.Position.w;
+
 	return VertexAttribute{
-		(b.Position - a.Position) * t + a.Position,
+		pos,
 		Vector3{0, 0, 0}, //Just allow the normal to be zero for now.
 		(b.VertexColor - a.VertexColor) * t + a.VertexColor
 	};
@@ -160,9 +162,12 @@ int BaseWindow::clipTrianglePlane(Vector3 planePosition, Vector3 planeNormal, Tr
 }
 
 void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttribute& c) {
-	Vector3 screenCoordA = Vector3{ floor(m_width * a.Position.x + m_width / 2), floor(m_height * a.Position.y + m_height / 2), 0 };
-	Vector3 screenCoordB = Vector3{ floor(m_width * b.Position.x + m_width / 2), floor(m_height * b.Position.y + m_height / 2), 0 };
-	Vector3 screenCoordC = Vector3{ floor(m_width * c.Position.x + m_width / 2), floor(m_height * c.Position.y + m_height / 2), 0 };
+	Vector3 aPos = a.Position;
+	Vector3 bPos = b.Position;
+	Vector3 cPos = c.Position;
+	Vector3 screenCoordA = Vector3{ floor(m_width * aPos.x + m_width / 2), floor(-m_height * aPos.y + m_height / 2), aPos.z };
+	Vector3 screenCoordB = Vector3{ floor(m_width * bPos.x + m_width / 2), floor(-m_height * bPos.y + m_height / 2), bPos.z };
+	Vector3 screenCoordC = Vector3{ floor(m_width * cPos.x + m_width / 2), floor(-m_height * cPos.y + m_height / 2), cPos.z };
 
 	Vector3 UnsortedA = screenCoordA;
 	Vector3 UnsortedB = screenCoordB;
@@ -192,9 +197,9 @@ void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 		Vector3 ac = UnsortedC - UnsortedA;
 		Vector3 bc = UnsortedC - UnsortedB;
 
-		float Z1 = 1 / a.Position.z;
-		float Z2 = 1 / b.Position.z;
-		float Z3 = 1 / c.Position.z;
+		float Z1 = 1 / (UnsortedA.z / UnsortedA.w);
+		float Z2 = 1 / (UnsortedB.z / UnsortedB.w);
+		float Z3 = 1 / (UnsortedC.z / UnsortedC.w);
 
 		if (x2 < x1) {
 			int temp = x2;
@@ -211,17 +216,21 @@ void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 
 			float depth = Z1 * u + Z2 * s + Z3 * t;
 			
-			if (1 / depth <= getDepth(x, y)) {
+			if (abs(1 / depth) <= getDepth(x, y) && depth > 0) {
 				Color color = (a.VertexColor * u * Z1 + b.VertexColor * s * Z2 + c.VertexColor * t * Z3) * (1 / depth);
 
 				//This will eventually invoke a shader program with the interpolated position, normal, and vertex color. 
 				setDepth(x, y, 1 / depth);
 				setPixel(x, y, color);
+
 			}
 		}
 	};
 
 	auto fillBottomFlatTri = [fillLine](Vector3 a, Vector3 b, Vector3 c) {
+		a = a / a.w;
+		b = b / b.w;
+		c = c / c.w;
 		float invslope1 = (b.x - a.x) / (b.y - a.y);
 		float invslope2 = (c.x - a.x) / (c.y - a.y);
 
@@ -236,6 +245,9 @@ void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 	};
 
 	auto fillTopFlatTri = [fillLine](Vector3 a, Vector3 b, Vector3 c) {
+		a = a / a.w;
+		b = b / b.w;
+		c = c / c.w;
 		float invslope1 = (c.x - a.x) / (c.y - a.y);
 		float invslope2 = (c.x - b.x) / (c.y - b.y);
 
@@ -273,7 +285,7 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 
 	Vector3 normal = Vector3::Cross((tri.b.Position - tri.a.Position), (tri.c.Position - tri.a.Position));
 
-	if (Vector3::Dot(-tri.a.Position, normal) <= 0) {
+	if (Vector3::Dot(-tri.a.Position, normal) > 0) {
 		return;
 	}
 
@@ -283,7 +295,7 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 	Vector3 planePosition = {};
 
 	switch (clipAgainst) {
-		case(0):{
+		case(0): {
 			planeNormal = { 0, 0, 1 };
 			planePosition = { 0, 0, 0.1f };//I'll add a constant for the near plane later.
 			break;
@@ -318,7 +330,6 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 	int numOut = clipTrianglePlane(planePosition, planeNormal, tri, out1, out2);
 
 	if (numOut == 0) { 
-
 		return; 
 	}
 	else if (numOut == 1) {
@@ -343,14 +354,21 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 
 void BaseWindow::drawTriangles() {
 	for (int i = 0; i < m_bufferLength; i++) {
-		Vector4 aPosition = m_perspective * Matrix::Inverse(m_view) * m_model * m_triBuffer[i].a.Position.ToVector4();
-		Vector4 bPosition = m_perspective * Matrix::Inverse(m_view) * m_model * m_triBuffer[i].b.Position.ToVector4();
-		Vector4 cPosition = m_perspective * Matrix::Inverse(m_view) * m_model * m_triBuffer[i].c.Position.ToVector4();
+		Vector3 aPosition = m_perspective * (Matrix::Inverse(m_view) * m_model * m_triBuffer[i].a.Position);
+		Vector3 bPosition = m_perspective * (Matrix::Inverse(m_view) * m_model * m_triBuffer[i].b.Position);
+		Vector3 cPosition = m_perspective * (Matrix::Inverse(m_view) * m_model * m_triBuffer[i].c.Position);
+
+		aPosition.x /= aPosition.w;
+		aPosition.y /= aPosition.w;
+		bPosition.x /= bPosition.w;
+		bPosition.y /= bPosition.w;
+		cPosition.x /= cPosition.w;
+		cPosition.y /= cPosition.w;
 
 		Triangle view = {
-			{aPosition.ToVector3(), {0, 0, 0}, m_triBuffer[i].a.VertexColor},
-			{bPosition.ToVector3(), {0, 0, 0}, m_triBuffer[i].b.VertexColor},
-			{cPosition.ToVector3(), {0, 0, 0}, m_triBuffer[i].c.VertexColor}
+			{aPosition, {0, 0, 0}, m_triBuffer[i].a.VertexColor},
+			{bPosition, {0, 0, 0}, m_triBuffer[i].b.VertexColor},
+			{cPosition, {0, 0, 0}, m_triBuffer[i].c.VertexColor}
 		};
 
 		drawClippedTri(view, 0);
@@ -382,14 +400,14 @@ void BaseWindow::render() {
 
 			m_screenContents[getIndex(x, y)] = newPixel;
 			
-			/*if (x < m_width - 1)
+			if (x < m_width - 1)
 				setPixel(x + 1, y,     (error * e1) + m_screenContents[getIndex(x + 1, y    )]);
 			if (x > 0 && y < m_height - 1)
 				setPixel(x - 1, y + 1, (error * e2) + m_screenContents[getIndex(x - 1, y + 1)]);
 			if (y < m_height - 1)
 				setPixel(x,     y + 1, (error * e3) + m_screenContents[getIndex(x,     y + 1)]);
-			//if (x < Width - 1 && y < Height - 1)*/
-				//SetPixel(x + 1, y + 1, (error * e4) + ScreenContents[getIndex(x + 1, y + 1)]);
+			if (x < m_width - 1 && y < m_height - 1)
+				setPixel(x + 1, y + 1, (error * e4) + m_screenContents[getIndex(x + 1, y + 1)]);
 			//I have no clue why the dithering doesn't work properly with this last line. 
 
 			short r = newPixel.R < 128 ? 0 : 0b01000000;

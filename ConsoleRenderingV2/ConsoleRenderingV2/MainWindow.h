@@ -38,7 +38,7 @@ public:
 		else if (key == 80) {
 			cameraLocation = cameraLocation - Vector3{ 0, 0, 0.1f };
 		}*/
-		angle += 0.1f;
+		angle += 0.05f;
 
 		setTriangleBuffer(test.m_data, test.triCount);
 		drawTriangles();

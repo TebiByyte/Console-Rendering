@@ -24,6 +24,7 @@ struct Matrix {
 	float Components[4][4];
 
 	static Matrix Inverse(Matrix);
+	static Matrix Transpose(Matrix);
 	static Matrix CreatePerspectiveMatrix(float, float, float);
 	static Matrix CreateTranslationMatrix(Vector3);
 	static Matrix CreateZRotationMatrix(float);

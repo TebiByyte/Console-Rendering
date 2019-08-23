@@ -121,15 +121,9 @@ Mesh::Mesh(std::string t_fileIn) {
 
 		for (unsigned int j = 0; j < indexedPoints.size(); j += 3) {
 
-			short r = 50 + rand() % 128;
-			srand(r * r + j * 1000 + time(NULL));
-			short g = 50 + rand() % 128;
-			srand(g * g + j * 1000 + time(NULL));
-			short b = 50 + rand() % 128;
-
-			points[j].VertexColor = { r, g, b };
-			points[j + 1].VertexColor = { r, g, b };
-			points[j + 2].VertexColor = { r, g, b };
+			points[j    ].VertexColor = { 255, 255, 255 };
+			points[j + 1].VertexColor = { 255, 255, 255 };
+			points[j + 2].VertexColor = { 255, 255, 255 };
 
 			m_data[j / 3].a = points[j];
 			m_data[j / 3].b = points[j + 1];

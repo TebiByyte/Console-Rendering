@@ -217,7 +217,13 @@ void BaseWindow::drawTriangle(VertexAttribute& a, VertexAttribute& b, VertexAttr
 			float depth = Z1 * u + Z2 * s + Z3 * t;
 			
 			if (abs(1 / depth) <= getDepth(x, y) && depth > 0) {
-				Color color = (a.VertexColor * u * Z1 + b.VertexColor * s * Z2 + c.VertexColor * t * Z3) * (1 / depth);
+				short red = (short)((a.VertexColor.R * u * Z1 + b.VertexColor.R * s * Z2 + c.VertexColor.R * t * Z3) / depth);
+				short gre = (short)((a.VertexColor.G * u * Z1 + b.VertexColor.G * s * Z2 + c.VertexColor.G * t * Z3) / depth);
+				short blu = (short)((a.VertexColor.B * u * Z1 + b.VertexColor.B * s * Z2 + c.VertexColor.B * t * Z3) / depth);
+				Vector3 interpolatedNormal = (a.Normal * u * Z1 + b.Normal * s * Z2 + c.Normal * t * Z3) / depth;
+
+				Color color = { red, gre, blu };
+				color = color * Vector3::Dot({ 0, -1, 1 }, interpolatedNormal);
 
 				//This will eventually invoke a shader program with the interpolated position, normal, and vertex color. 
 				setDepth(x, y, 1 / depth);
@@ -282,8 +288,17 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 	//3 clips against the bottom plane
 	//4 clips against the right plane
 	//5 clips against the left plane
+	Vector3 a = tri.a.Position; 
+	Vector3 b = tri.b.Position; 
+	Vector3 c = tri.c.Position;
+	a.x *= a.w;
+	a.y *= a.w;
+	b.x *= b.w;
+	b.y *= b.w;
+	c.x *= c.w;
+	c.y *= c.w;
 
-	Vector3 normal = Vector3::Cross((tri.b.Position - tri.a.Position), (tri.c.Position - tri.a.Position));
+	Vector3 normal = Vector3::Cross((b - a), (c - a));
 
 	if (Vector3::Dot(-tri.a.Position, normal) > 0) {
 		return;
@@ -353,10 +368,17 @@ void BaseWindow::drawClippedTri(Triangle& tri, int clipAgainst) {
 }
 
 void BaseWindow::drawTriangles() {
+	Matrix transform = m_perspective * Matrix::Inverse(m_view) * m_model;
+	Matrix invTranspos = Matrix::Transpose(Matrix::Inverse(m_model) * m_view);
 	for (int i = 0; i < m_bufferLength; i++) {
-		Vector3 aPosition = m_perspective * (Matrix::Inverse(m_view) * m_model * m_triBuffer[i].a.Position);
-		Vector3 bPosition = m_perspective * (Matrix::Inverse(m_view) * m_model * m_triBuffer[i].b.Position);
-		Vector3 cPosition = m_perspective * (Matrix::Inverse(m_view) * m_model * m_triBuffer[i].c.Position);
+
+		Vector3 aPosition = transform * m_triBuffer[i].a.Position;
+		Vector3 bPosition = transform * m_triBuffer[i].b.Position;
+		Vector3 cPosition = transform * m_triBuffer[i].c.Position;
+		
+		Vector3 normA = invTranspos * m_triBuffer[i].a.Normal;
+		Vector3 normB = invTranspos * m_triBuffer[i].b.Normal;
+		Vector3 normC = invTranspos * m_triBuffer[i].c.Normal;
 
 		aPosition.x /= aPosition.w;
 		aPosition.y /= aPosition.w;
@@ -366,9 +388,9 @@ void BaseWindow::drawTriangles() {
 		cPosition.y /= cPosition.w;
 
 		Triangle view = {
-			{aPosition, {0, 0, 0}, m_triBuffer[i].a.VertexColor},
-			{bPosition, {0, 0, 0}, m_triBuffer[i].b.VertexColor},
-			{cPosition, {0, 0, 0}, m_triBuffer[i].c.VertexColor}
+			{aPosition, normA, m_triBuffer[i].a.VertexColor},
+			{bPosition, normB, m_triBuffer[i].b.VertexColor},
+			{cPosition, normC, m_triBuffer[i].c.VertexColor}
 		};
 
 		drawClippedTri(view, 0);
@@ -376,50 +398,6 @@ void BaseWindow::drawTriangles() {
 }
 
 void BaseWindow::render() {
-	//First, dither the color buffer
-
-	float e1 = (7.0f / 16.0f);
-	float e2 = (3.0f / 16.0f);
-	float e3 = (5.0f / 16.0f);
-	float e4 = (1.0f / 16.0f);
-
-	for (int y = 0; y < m_height; y++) {
-		for (int x = 0; x < m_width; x++) {
-			Color currentPixel = m_screenContents[getIndex(x, y)];
-
-			short R = currentPixel.R < 85 ? 0 : 170;
-			short G = currentPixel.G < 85 ? 0 : 170;
-			short B = currentPixel.B < 85 ? 0 : 170;
-			float L = currentPixel.Luminance();
-
-			Color newPixel = Color{ R, G, B };
-
-			newPixel = newPixel * (L < 128 ? 1 : 2);
-
-			Color error = currentPixel - newPixel;
-
-			m_screenContents[getIndex(x, y)] = newPixel;
-			
-			if (x < m_width - 1)
-				setPixel(x + 1, y,     (error * e1) + m_screenContents[getIndex(x + 1, y    )]);
-			if (x > 0 && y < m_height - 1)
-				setPixel(x - 1, y + 1, (error * e2) + m_screenContents[getIndex(x - 1, y + 1)]);
-			if (y < m_height - 1)
-				setPixel(x,     y + 1, (error * e3) + m_screenContents[getIndex(x,     y + 1)]);
-			if (x < m_width - 1 && y < m_height - 1)
-				setPixel(x + 1, y + 1, (error * e4) + m_screenContents[getIndex(x + 1, y + 1)]);
-			//I have no clue why the dithering doesn't work properly with this last line. 
-
-			short r = newPixel.R < 128 ? 0 : 0b01000000;
-			short g = newPixel.G < 128 ? 0 : 0b00100000;
-			short b = newPixel.B < 128 ? 0 : 0b00010000;
-			short l = L < 128 ? 0 : 0b10000000;
-			
-			m_screenBuffer[getIndex(x, y)].Attributes = l | r | g | b;
-			m_screenBuffer[getIndex(x, y)].Char.AsciiChar = ' ';
-		}
-	}
-
 	WriteConsoleOutput(m_hConsole, m_screenBuffer, { (short)m_width, (short)m_height }, { 0, 0 }, &m_rectWindow);
 }
 
@@ -439,5 +417,30 @@ void BaseWindow::setDepth(int x, int y, float d) {
 inline void BaseWindow::setPixel(int x, int y, Color c) {
 	if (x >= 0 && x < m_width && y >= 0 && y < m_height) {
 		m_screenContents[x + m_width * y] = c;
+
+		short R = c.R < 64 ? 0 : 128;
+		short G = c.G < 64 ? 0 : 128;
+		short B = c.B < 64 ? 0 : 128;
+		float L = c.Luminance();
+
+		Color newPixel = { R, G, B };
+		newPixel = newPixel * (L < 128 ? 1 : 2);
+
+		short r = newPixel.R < 128 ? 0 : 0b01000000;
+		short g = newPixel.G < 128 ? 0 : 0b00100000;
+		short b = newPixel.B < 128 ? 0 : 0b00010000;
+		short l = L < 128 ? 0 : 0b10000000;
+
+		m_screenBuffer[getIndex(x, y)].Attributes = l | r | g | b;
+
+		if (L < 255 / 4)
+			m_screenBuffer[getIndex(x, y)].Char = { 0x2593 };
+		else if (L < 255 / 2)
+			m_screenBuffer[getIndex(x, y)].Char = { 0x2592 };
+		else if (L < 3 * 255 / 4)
+			m_screenBuffer[getIndex(x, y)].Char = { 0x2591 };
+		else
+			m_screenBuffer[getIndex(x, y)].Char = { 0x0020 };
+	
 	}
 }

@@ -138,6 +138,16 @@ Matrix Matrix::Inverse(Matrix a) {
 	return result;
 }
 
+Matrix Matrix::Transpose(Matrix a)
+{
+	return {
+		a.Components[0][0], a.Components[1][0], a.Components[2][0], a.Components[3][0],
+		a.Components[0][1], a.Components[1][1], a.Components[2][1], a.Components[3][1],
+		a.Components[0][2], a.Components[1][2], a.Components[2][2], a.Components[3][2],
+		a.Components[0][3], a.Components[1][3], a.Components[2][3], a.Components[3][3]
+	};
+}
+
 //TODO: Include aspect ratio in this function.
 Matrix Matrix::CreatePerspectiveMatrix(float fov, float near, float far) {
 	float S = 1 / tan((fov / 2) * PI / 180);
